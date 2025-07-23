@@ -129,33 +129,26 @@ if "chat_history" not in st.session_state:
 for msg in st.session_state.chat_history:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# 🎙️ Voice Recorder
-st.markdown("### 🎤 Record your question")
-audio_bytes = audiorecorder("Click to record", "Recording...")
+# 🎤 Record your question
+st.markdown("### 🎙️ Ask using voice")
+audio = audiorecorder("🎙️ Record voice", "Recording...")
 
-# Manual input also available
-user_input = st.chat_input("...or type your question here")
+user_input = st.chat_input("...or type your question")
 
-# Transcribe voice if present
-if audio_bytes and not user_input:
+# Transcribe using OpenAI Whisper
+if audio and not user_input:
     try:
-        recognizer = sr.Recognizer()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-            f.write(audio_bytes)
-            audio_path = f.name
-
-        with sr.AudioFile(audio_path) as source:
-            audio_data = recognizer.record(source)
-            transcribed = recognizer.recognize_google(audio_data)
-            user_input = transcribed
-            st.success(f"You said: {transcribed}")
-
-    except sr.UnknownValueError:
-        st.warning("Could not understand audio.")
-    except sr.RequestError:
-        st.error("Google Speech Recognition API failed.")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
+            tmp.write(audio)
+            tmp_path = tmp.name
+        with open(tmp_path, "rb") as f:
+            transcript = me.openai.audio.transcriptions.create(
+                model="whisper-1", file=f
+            )
+        user_input = transcript.text
+        st.success(f"You said: {user_input}")
     except Exception as e:
-        st.error(f"Transcription error: {e}")
+        st.error(f"Transcription failed: {e}")
 
 if user_input:
     st.chat_message("user").write(user_input)
