@@ -6,13 +6,10 @@ from pypdf import PdfReader
 from dotenv import load_dotenv
 import requests
 import tempfile
-import speech_recognition as sr
-from audiorecorder import audiorecorder
 
 load_dotenv()
 st.set_page_config(page_title="Ashish Kamat | AI Chat", layout="centered")
 
-# Load credentials
 PUSHOVER_TOKEN = st.secrets.get("PUSHOVER_TOKEN", os.getenv("PUSHOVER_TOKEN"))
 PUSHOVER_USER = st.secrets.get("PUSHOVER_USER", os.getenv("PUSHOVER_USER"))
 
@@ -129,26 +126,22 @@ if "chat_history" not in st.session_state:
 for msg in st.session_state.chat_history:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# 🎤 Record your question
-st.markdown("### 🎙️ Ask using voice")
-audio = audiorecorder("🎙️ Record voice", "Recording...")
+# 🎤 Audio recorder (native)
+st.markdown("### 🎙️ Record your voice question (webm)")
+audio_data = st.audio_recorder("Record", format="webm")
 
 user_input = st.chat_input("...or type your question")
 
-# Transcribe using OpenAI Whisper
-if audio and not user_input:
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
-            tmp.write(audio)
-            tmp_path = tmp.name
-        with open(tmp_path, "rb") as f:
-            transcript = me.openai.audio.transcriptions.create(
-                model="whisper-1", file=f
-            )
-        user_input = transcript.text
-        st.success(f"You said: {user_input}")
-    except Exception as e:
-        st.error(f"Transcription failed: {e}")
+if audio_data and not user_input:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
+        tmp.write(audio_data)
+        tmp_path = tmp.name
+    with open(tmp_path, "rb") as f:
+        transcript = me.openai.audio.transcriptions.create(
+            model="whisper-1", file=f
+        )
+    user_input = transcript.text
+    st.success(f"You said: {user_input}")
 
 if user_input:
     st.chat_message("user").write(user_input)
