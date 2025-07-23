@@ -4,3 +4,6 @@ streamlit
 pypdf
 openai
 openai-agents
+gTTS
+SpeechRecognition
+streamlit-webrtc
