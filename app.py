@@ -141,7 +141,7 @@ def audio_callback(frame: av.AudioFrame) -> av.AudioFrame:
 webrtc_streamer(
     key="audio",
     mode=WebRtcMode.SENDONLY,
-    in_audio_enabled=True,
+    on_audio_enabled=True,
     video_enabled=False,
     audio_frame_callback=audio_callback,
 )
