@@ -6,8 +6,12 @@ from pypdf import PdfReader
 from dotenv import load_dotenv
 import requests
 import tempfile
+import av
+from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
+import queue
 
 load_dotenv()
+
 st.set_page_config(page_title="Ashish Kamat | AI Chat", layout="centered")
 
 PUSHOVER_TOKEN = st.secrets.get("PUSHOVER_TOKEN", os.getenv("PUSHOVER_TOKEN"))
@@ -117,31 +121,54 @@ class Me:
                 return msg.content
 
 # --- Streamlit UI ---
-st.title("🤖 Chat with Ashish Kamat")
-me = Me()
+st.title("🎙️ Chat with Ashish Kamat — Voice or Text")
 
+me = Me()
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 for msg in st.session_state.chat_history:
     st.chat_message(msg["role"]).write(msg["content"])
 
-# 🎤 Audio recorder (native)
-st.markdown("### 🎙️ Record your voice question (webm)")
-audio_data = st.audio_recorder("Record", format="webm")
+# Voice recording section
+st.markdown("#### 🎤 Record your voice")
+audio_buffer = queue.Queue()
 
-user_input = st.chat_input("...or type your question")
+def audio_callback(frame: av.AudioFrame) -> av.AudioFrame:
+    audio_buffer.put(frame)
+    return frame
 
-if audio_data and not user_input:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp:
-        tmp.write(audio_data)
-        tmp_path = tmp.name
-    with open(tmp_path, "rb") as f:
-        transcript = me.openai.audio.transcriptions.create(
-            model="whisper-1", file=f
-        )
-    user_input = transcript.text
-    st.success(f"You said: {user_input}")
+webrtc_streamer(
+    key="audio",
+    mode=WebRtcMode.SENDONLY,
+    in_audio_enabled=True,
+    video_enabled=False,
+    audio_receiver_size=1024,
+    client_settings=ClientSettings(media_stream_constraints={"audio": True, "video": False}),
+    audio_frame_callback=audio_callback,
+)
+
+# Transcribe after stopping (manual)
+if st.button("🔍 Transcribe Last Recording"):
+    frames = []
+    while not audio_buffer.empty():
+        frames.append(audio_buffer.get())
+
+    if frames:
+        pcm_data = b"".join([f.planes[0].to_bytes() for f in frames])
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(pcm_data)
+            tmp_path = tmp.name
+
+        with open(tmp_path, "rb") as f:
+            transcript = me.openai.audio.transcriptions.create(model="whisper-1", file=f)
+        user_input = transcript.text
+        st.success(f"You said: {user_input}")
+    else:
+        user_input = None
+        st.warning("No audio recorded.")
+else:
+    user_input = st.chat_input("...or type your question")
 
 if user_input:
     st.chat_message("user").write(user_input)

@@ -4,5 +4,4 @@ streamlit
 pypdf
 openai
 openai-agents
-SpeechRecognition
-streamlit-audiorecorder
+streamlit-webrtc
