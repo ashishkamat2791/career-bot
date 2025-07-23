@@ -142,8 +142,7 @@ webrtc_streamer(
     key="audio",
     mode=WebRtcMode.SENDONLY,
     on_audio_ended=True,
-    video_enabled=False,
-    audio_frame_callback=audio_callback,
+    audio_frame_callback=audio_callback
 )
 
 
