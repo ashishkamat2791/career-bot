@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import requests
 import tempfile
 import av
-from streamlit_webrtc import webrtc_streamer, WebRtcMode, ClientSettings
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import queue
 
 load_dotenv()
@@ -143,10 +143,9 @@ webrtc_streamer(
     mode=WebRtcMode.SENDONLY,
     in_audio_enabled=True,
     video_enabled=False,
-    audio_receiver_size=1024,
-    client_settings=ClientSettings(media_stream_constraints={"audio": True, "video": False}),
     audio_frame_callback=audio_callback,
 )
+
 
 # Transcribe after stopping (manual)
 if st.button("🔍 Transcribe Last Recording"):
