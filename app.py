@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 import requests
 import tempfile
 import speech_recognition as sr
-from streamlit_webrtc import webrtc_streamer, AudioProcessorBase
-import av
+from audiorecorder import audiorecorder
 
 load_dotenv()
 st.set_page_config(page_title="Ashish Kamat | AI Chat", layout="centered")
 
+# Load credentials
 PUSHOVER_TOKEN = st.secrets.get("PUSHOVER_TOKEN", os.getenv("PUSHOVER_TOKEN"))
 PUSHOVER_USER = st.secrets.get("PUSHOVER_USER", os.getenv("PUSHOVER_USER"))
 
@@ -119,25 +119,6 @@ class Me:
             else:
                 return msg.content
 
-
-# 🎙️ Voice input using streamlit-webrtc
-class AudioProcessor(AudioProcessorBase):
-    def recv(self, frame: av.AudioFrame) -> av.AudioFrame:
-        audio = frame.to_ndarray().flatten().tobytes()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-            f.write(audio)
-            audio_path = f.name
-        try:
-            recognizer = sr.Recognizer()
-            with sr.AudioFile(audio_path) as source:
-                audio_data = recognizer.record(source)
-                text = recognizer.recognize_google(audio_data)
-                st.session_state.transcribed_text = text
-        except Exception as e:
-            st.warning(f"Could not transcribe audio: {e}")
-        return frame
-
-
 # --- Streamlit UI ---
 st.title("🤖 Chat with Ashish Kamat")
 me = Me()
@@ -148,21 +129,33 @@ if "chat_history" not in st.session_state:
 for msg in st.session_state.chat_history:
     st.chat_message(msg["role"]).write(msg["content"])
 
-st.markdown("### 🎤 Speak your question or type below:")
+# 🎙️ Voice Recorder
+st.markdown("### 🎤 Record your question")
+audio_bytes = audiorecorder("Click to record", "Recording...")
 
-webrtc_streamer(
-    key="voice",
-    audio_processor_factory=AudioProcessor,
-    media_stream_constraints={"audio": True, "video": False}
-)
+# Manual input also available
+user_input = st.chat_input("...or type your question here")
 
-user_input = st.chat_input("Ask Ashish about his experience, skills, or resume...")
+# Transcribe voice if present
+if audio_bytes and not user_input:
+    try:
+        recognizer = sr.Recognizer()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+            f.write(audio_bytes)
+            audio_path = f.name
 
-# Prefer transcribed voice if present
-if "transcribed_text" in st.session_state and not user_input:
-    user_input = st.session_state.transcribed_text
-    st.info(f"You said: {user_input}")
-    del st.session_state.transcribed_text
+        with sr.AudioFile(audio_path) as source:
+            audio_data = recognizer.record(source)
+            transcribed = recognizer.recognize_google(audio_data)
+            user_input = transcribed
+            st.success(f"You said: {transcribed}")
+
+    except sr.UnknownValueError:
+        st.warning("Could not understand audio.")
+    except sr.RequestError:
+        st.error("Google Speech Recognition API failed.")
+    except Exception as e:
+        st.error(f"Transcription error: {e}")
 
 if user_input:
     st.chat_message("user").write(user_input)
