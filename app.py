@@ -5,12 +5,6 @@ from openai import OpenAI
 from pypdf import PdfReader
 from dotenv import load_dotenv
 import requests
-from phoenix.otel import register
-
-tracer_provider = register(
-  project_name="career-bot-local",
-  auto_instrument=True
-)
 
 
 load_dotenv()
