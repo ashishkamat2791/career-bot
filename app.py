@@ -5,15 +5,22 @@ from openai import OpenAI
 from pypdf import PdfReader
 from dotenv import load_dotenv
 import requests
+from phoenix.otel import register
+
+tracer_provider = register(
+  project_name="career-bot-local",
+  auto_instrument=True
+)
 
 load_dotenv()
 
 st.set_page_config(page_title="Ashish Kamat | AI Chat", layout="centered")
 
 # Load Pushover tokens from secrets if available
-PUSHOVER_TOKEN = st.secrets.get("PUSHOVER_TOKEN", os.getenv("PUSHOVER_TOKEN"))
-PUSHOVER_USER = st.secrets.get("PUSHOVER_USER", os.getenv("PUSHOVER_USER"))
-
+# PUSHOVER_TOKEN = st.secrets.get("PUSHOVER_TOKEN", os.getenv("PUSHOVER_TOKEN"))
+# PUSHOVER_USER = st.secrets.get("PUSHOVER_USER", os.getenv("PUSHOVER_USER"))
+PUSHOVER_TOKEN = os.getenv("PUSHOVER_TOKEN")
+PUSHOVER_USER =  os.getenv("PUSHOVER_USER")
 
 def push(text):
     if PUSHOVER_TOKEN and PUSHOVER_USER:
