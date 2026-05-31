@@ -9,10 +9,7 @@ import requests
 
 load_dotenv()
 
-tracer_provider = register(
-  project_name="career-bot",
-  auto_instrument=True
-)
+
 st.set_page_config(page_title="Ashish Kamat | AI Chat", layout="centered")
 
 # Load Pushover tokens from secrets if available
