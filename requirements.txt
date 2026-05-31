@@ -4,5 +4,3 @@ streamlit
 pypdf
 openai
 openai-agents
-arize-phoenix-otel
-openinference-instrumentation-openai 
